@@ -1,37 +1,20 @@
-from src import source_repository, destination_repository, model
+from repository import AbstractRepository
+import model
 
 
-def sync_example_value_objects(
-    source_repository: source_repository.AbstractSourceRepository,
-    destination_repository: destination_repository.AbstractDestinationRepository,
-):
+def irr_pipeline(repository: AbstractRepository):
     """
-    Syncs destination repository with source repository.
+    Perform an Internal Rate of Return (IRR) data pipeline. The pipeline retrieves cashflows, creates entities,
+    allocates cashflows to entities, calculates IRRs, and loads IRR data into the repository.
 
     Args:
-        source_repository (source_repository.AbstractSourceRepository):
-            The data repository to get Example Value Objects from.
-        destination_repository (destination_repository.AbstractDestinationRepository):
-            The data repository to load Example Value Objects into.
-        
+        repository (AbstractRepository): The repository for data retrieval and storage.
     """
-    example_value_objects = source_repository.get_example_value_objects()
-    destination_repository.load_example_value_objects(example_value_objects)
+    cashflows = repository.get_cashflows()
+    entities = model.entities_collection_creation(cashflows)
+    entities = model.allocate_cashflows_to_entities(cashflows, entities)
 
+    for entity in entities.values():
+        entity.calculate_irr()
 
-def sync_example_entities(
-    source_repository: source_repository.AbstractSourceRepository,
-    destination_repository: destination_repository.AbstractDestinationRepository,
-):
-    """
-    Syncs destination repository with source repository.
-
-    Args:
-        source_repository (source_repository.AbstractSourceRepository):
-            The data repository to get Example Entities from.
-        destination_repository (destination_repository.AbstractDestinationRepository):
-            The data repository to load Example Entities into.
-        
-    """
-    example_entities = source_repository.get_example_entities
-    destination_repository.load_example_entities(example_entities)
+    repository.load_irrs(entities)

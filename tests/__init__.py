@@ -10,7 +10,7 @@ sys.path.append(os.path.join(os.getcwd(), "src"))
 
 # load sa if applicable
 if os.environ.get("SA_JSON"):
-    name = "sa.json"
-    with open(name, "w") as f:
-        f.write(os.environ.get("SA_JSON", ""))
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = name
+    file_name = "sa.json"
+    with open(file_name, "w") as f:
+        f.write(os.environ.get("SA_JSON", "{}"))
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = file_name

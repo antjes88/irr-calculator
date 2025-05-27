@@ -1,13 +1,13 @@
 {
-    "name": "template-python-devcontainer",
+    "name": "irr-calculator",
     "build": {
         "context": "..",
         "dockerfile": "./Dockerfile",
         "target": "devcontainer"
     },
     "remoteEnv": {
-        "PYTHONPATH": "/workspaces/template-python-devcontainer/src/entrypoints:${containerEnv:PYTHONPATH}",
-        "PATH": "/usr/app/google-cloud-sdk/bin:/workspaces/template-python-devcontainer/cli/bin:${containerEnv:PATH}",
+        "PYTHONPATH": "/workspaces/irr-calculator/src/entrypoints:${containerEnv:PYTHONPATH}",
+        "PATH": "/usr/app/google-cloud-sdk/bin:/workspaces/irr-calculator/cli/bin:${containerEnv:PATH}",
         "ISDEVCONTAINER": "true"
     },
     "postCreateCommand": "/usr/app/post_create_commands.sh",
