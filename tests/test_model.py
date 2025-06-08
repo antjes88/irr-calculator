@@ -9,9 +9,15 @@ def test_sort_for_cashflow():
     WHEN this list is sorted [sorted()]
     THEN the Cashflow instances has to be sorted by date from older to newer
     """
-    cashflow1 = model.Cashflow(dt.datetime(2022, 1, 1), 1000, 0, 0, "test entity")
-    cashflow2 = model.Cashflow(dt.datetime(2023, 2, 1), 0, 100, 1000, "test entity")
-    cashflow3 = model.Cashflow(dt.datetime(1998, 3, 1), 0, 100, 1000, "test entity")
+    cashflow1 = model.CashflowSnapshot(
+        dt.datetime(2022, 1, 1), 1000, 0, 0, "test entity"
+    )
+    cashflow2 = model.CashflowSnapshot(
+        dt.datetime(2023, 2, 1), 0, 100, 1000, "test entity"
+    )
+    cashflow3 = model.CashflowSnapshot(
+        dt.datetime(1998, 3, 1), 0, 100, 1000, "test entity"
+    )
 
     assert sorted([cashflow1, cashflow2, cashflow3]) == [
         cashflow3,
@@ -26,8 +32,10 @@ def test_sort_for_cashflow_none_cases():
     WHEN those cashflows are sorted
     THEN cashflow with None as date should be listed first
     """
-    cashflow1 = model.Cashflow(None, 1000, 0, 0, "test entity")
-    cashflow2 = model.Cashflow(dt.datetime(2023, 2, 1), 0, 100, 1000, "test entity")
+    cashflow1 = model.CashflowSnapshot(None, 1000, 0, 0, "test entity")
+    cashflow2 = model.CashflowSnapshot(
+        dt.datetime(2023, 2, 1), 0, 100, 1000, "test entity"
+    )
 
     assert sorted([cashflow1, cashflow2]) == [cashflow1, cashflow2]
     assert sorted([cashflow2, cashflow1]) == [cashflow1, cashflow2]
@@ -41,14 +49,18 @@ def test_allocate():
          this cashflow and are sorted
     """
     entity_name = "test entity"
-    cashflow1 = model.Cashflow(dt.datetime(2022, 1, 1), 100, 100, 100, entity_name)
-    cashflow2 = model.Cashflow(dt.datetime(2023, 1, 2), 1000, 1000, 1000, entity_name)
-    entity = model.Entity(entity_name)
+    cashflow1 = model.CashflowSnapshot(
+        dt.datetime(2022, 1, 1), 100, 100, 100, entity_name
+    )
+    cashflow2 = model.CashflowSnapshot(
+        dt.datetime(2023, 1, 2), 1000, 1000, 1000, entity_name
+    )
+    entity = model.Account(entity_name)
     entities = {entity_name: entity}
 
-    model.allocate_cashflows_to_entities([cashflow2, cashflow1], entities)
+    model.allocate_cashflow_snapshots_to_accounts([cashflow2, cashflow1], entities)
 
-    assert entity.sorted_cashflows == [cashflow1, cashflow2]
+    assert entity.sorted_cashflow_snapshots == [cashflow1, cashflow2]
 
 
 def test_calculate_irrs():
@@ -58,23 +70,23 @@ def test_calculate_irrs():
     THEN irrs has to be calculated producing expected results
     """
     entity_name = "test account"
-    entity = model.Entity(entity_name)
+    entity = model.Account(entity_name)
     entities = {entity_name: entity}
 
-    model.allocate_cashflows_to_entities(
+    model.allocate_cashflow_snapshots_to_accounts(
         [
-            model.Cashflow(dt.datetime(2022, 1, 1), 1000, 0, 0, entity_name),
-            model.Cashflow(dt.datetime(2022, 2, 1), 0, 100, 1000, entity_name),
-            model.Cashflow(dt.datetime(2022, 3, 1), 0, 100, 1000, entity_name),
+            model.CashflowSnapshot(dt.datetime(2022, 1, 1), 1000, 0, 0, entity_name),
+            model.CashflowSnapshot(dt.datetime(2022, 2, 1), 0, 100, 1000, entity_name),
+            model.CashflowSnapshot(dt.datetime(2022, 3, 1), 0, 100, 1000, entity_name),
         ],
         entities,
     )
 
     entities[entity_name].calculate_irr()
 
-    assert entities[entity_name].irrs == [
-        model.Irr(dt.datetime(2022, 2, 1), 0.1, entity_name),
-        model.Irr(dt.datetime(2022, 3, 1), 0.1, entity_name),
+    assert entities[entity_name].irr_snapshots == [
+        model.IrrSnapshot(dt.datetime(2022, 2, 1), 0.1, entity_name),
+        model.IrrSnapshot(dt.datetime(2022, 3, 1), 0.1, entity_name),
     ]
 
 
@@ -87,25 +99,9 @@ def test_cashflow_value_annual(value, expected_result):
     WHEN calling Irr.value_annual
     THEN the annualised irr value has to be returned
     """
-    irr = model.Irr(dt.datetime(2022, 2, 1), value, "test - account")
+    irr = model.IrrSnapshot(dt.datetime(2022, 2, 1), value, "test - account")
 
-    assert irr.value_annual == expected_result
-
-
-def test_irr_to_dict():
-    """
-    GIVEN an Internal Rate of Return
-    WHEN it is converted to dict
-    THEN check that the return is the expected value
-    """
-    irr = model.Irr(dt.datetime(2022, 2, 1), 1, "test - account")
-
-    assert irr.to_dict() == {
-        "date": "2022-02-01",
-        "irr_monthly": 1,
-        "irr_annual": 4095,
-        "entity_name": "test - account",
-    }
+    assert irr.irr_annual == expected_result
 
 
 def test_entity_equality():
@@ -115,8 +111,8 @@ def test_entity_equality():
     THEN they are equal
     """
     entity_name = "test entity"
-    entity1 = model.Entity(entity_name)
-    entity2 = model.Entity(entity_name)
+    entity1 = model.Account(entity_name)
+    entity2 = model.Account(entity_name)
 
     assert entity1 == entity2
 
@@ -127,8 +123,8 @@ def test_entity_inequality():
     WHEN they have different entity name
     THEN they are different
     """
-    entity1 = model.Entity("test entity")
-    entity2 = model.Entity("other")
+    entity1 = model.Account("test entity")
+    entity2 = model.Account("other")
 
     assert not entity1 == entity2
     assert not entity1 == 1

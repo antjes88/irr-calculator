@@ -1,20 +1,29 @@
-from repository import AbstractRepository
-import model
+from src.destination_repository import AbstractDestinationRepository
+from src.source_repository import AbstractSourceRepository
+from src import model
 
 
-def irr_pipeline(repository: AbstractRepository):
+def irr_pipeline(
+    source_repository: AbstractSourceRepository,
+    destination_repository: AbstractDestinationRepository,
+):
     """
-    Perform an Internal Rate of Return (IRR) data pipeline. The pipeline retrieves cashflows, creates entities,
-    allocates cashflows to entities, calculates IRRs, and loads IRR data into the repository.
+    Executes the Internal Rate of Return (IRR) data pipeline.
+    This pipeline retrieves cashflow snapshots from the source repository,
+    processes them to create account collections, allocates cashflows to accounts,
+    calculates IRRs for each account, and loads the resulting IRR data into the destination repository.
 
     Args:
-        repository (AbstractRepository): The repository for data retrieval and storage.
+        source_repository (AbstractSourceRepository): The repository used to retrieve cashflow snapshots.
+        destination_repository (AbstractDestinationRepository): The repository used to store calculated IRR data.
     """
-    cashflows = repository.get_cashflows()
-    entities = model.entities_collection_creation(cashflows)
-    entities = model.allocate_cashflows_to_entities(cashflows, entities)
+    cashflow_snapshots = source_repository.get_cashflow_snapshots()
+    accounts = model.account_collection_creation(cashflow_snapshots)
+    accounts = model.allocate_cashflow_snapshots_to_accounts(
+        cashflow_snapshots, accounts
+    )
 
-    for entity in entities.values():
-        entity.calculate_irr()
+    for account in accounts.values():
+        account.calculate_irr()
 
-    repository.load_irrs(entities)
+    destination_repository.load_irrs(accounts)
