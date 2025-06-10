@@ -52,7 +52,7 @@ resource "google_pubsub_topic" "default" {
 resource "google_cloud_scheduler_job" "default" {
   name        = "cloud-function-${var.cloud_function_name}"
   description = "Scheduler to trigger the cloud function: ${var.cloud_function_name}"
-  schedule    = "5 0 * * *"
+  schedule    = "30 0 * * *"
 
   pubsub_target {
     topic_name = google_pubsub_topic.default.id
