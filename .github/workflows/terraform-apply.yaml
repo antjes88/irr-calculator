@@ -6,13 +6,9 @@ permissions:
   pull-requests: write
 
 on:
-  pull_request:
+  push:
     branches:
       - main
-  # TODO: remove
-  # push:
-    # branches:
-    #   - main
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

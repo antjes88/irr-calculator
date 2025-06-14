@@ -20,7 +20,7 @@ def bq_source_repository() -> BigQuerySourceRepository:
     client = create_bigquery_client(project_id=os.environ["PROJECT_SOURCE"])
     bq_source_repository = BigQuerySourceRepository(client=client)
     bq_source_repository.cashflow_source = (
-        f"SELECT * FROM {os.environ['DATASET']}.{os.environ['SOURCE_TABLE']}"
+        f"SELECT * FROM {os.environ['SOURCE_DATASET']}.{os.environ['SOURCE_TABLE']}"
     )
 
     return bq_source_repository
@@ -46,7 +46,7 @@ def source_repository_with_cashflows(
     )
     load_job = bq_source_repository.client.load_table_from_json(
         CASHFLOWS_DICTS,
-        os.environ["DATASET"] + "." + os.environ["SOURCE_TABLE"],
+        os.environ["SOURCE_DATASET"] + "." + os.environ["SOURCE_TABLE"],
         job_config=job_config,
     )
     load_job.result()
@@ -54,7 +54,7 @@ def source_repository_with_cashflows(
     yield bq_source_repository
 
     bq_source_repository.client.delete_table(
-        os.environ["DATASET"] + "." + os.environ["SOURCE_TABLE"]
+        os.environ["SOURCE_DATASET"] + "." + os.environ["SOURCE_TABLE"]
     )
 
 
@@ -69,7 +69,7 @@ def bq_destination_repository() -> Generator[BigQueryDestinationRepository, None
     client = create_bigquery_client(project_id=os.environ["PROJECT_DESTINATION"])
     bq_destination_repository = BigQueryDestinationRepository(client=client)
     bq_destination_repository.irr_destination = (
-        f"{os.environ['DATASET']}.{os.environ['DESTINATION_TABLE']}"
+        f"{os.environ['DESTINATION_DATASET']}.{os.environ['DESTINATION_TABLE']}"
     )
 
     yield bq_destination_repository

@@ -24,7 +24,8 @@ jobs:
     env: 
       PROJECT_SOURCE: ${{ secrets.PROJECT_SOURCE }}
       PROJECT_DESTINATION: ${{ secrets.PROJECT_DESTINATION }}
-      DATASET: pytest
+      SOURCE_DATASET: pytest
+      DESTINATION_DATASET: pytest
       SOURCE_TABLE: cashflows
       DESTINATION_TABLE: irrs
     

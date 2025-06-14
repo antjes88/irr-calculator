@@ -164,7 +164,6 @@ def allocate_cashflow_snapshots_to_accounts(
     """
     for cashflow_snapshot in cashflow_snapshots:
         accounts[cashflow_snapshot.account_name].add_cashflow(cashflow_snapshot)
-    # TODO: get an except catcher for KeyError!?
 
     return accounts
 
