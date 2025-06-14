@@ -1,7 +1,7 @@
 import click
-from src.entrypoints.cli.dummy import dummy
+from src.entrypoints.cli.calculate_irr import calculate_irr
 import warnings
-from src.utils.env_var_loader import env_var_loader
+from dotenv import load_dotenv
 
 
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -12,8 +12,8 @@ def cli():
     pass
 
 
-cli.add_command(dummy)
+cli.add_command(calculate_irr)
 
 if __name__ == "__main__":
-    env_var_loader(".env")
+    load_dotenv(dotenv_path=".env", override=True)
     cli()

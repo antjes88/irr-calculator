@@ -8,7 +8,7 @@ permissions:
 on:
   pull_request:
     branches:
-      - dummy
+      - main
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -22,9 +22,12 @@ jobs:
         python-version: ['3.10']
       max-parallel: 1
     env: 
-      PROJECT: ${{ secrets.PROJECT }}
-      DESTINATION_TABLE: ${{ secrets.DESTINATION_TABLE }}
-      DATASET: ${{ secrets.DATASET }}
+      PROJECT_SOURCE: ${{ secrets.PROJECT_SOURCE }}
+      PROJECT_DESTINATION: ${{ secrets.PROJECT_DESTINATION }}
+      SOURCE_DATASET: pytest
+      DESTINATION_DATASET: pytest
+      SOURCE_TABLE: cashflows
+      DESTINATION_TABLE: irrs
     
     steps:
       - name: Checkout code

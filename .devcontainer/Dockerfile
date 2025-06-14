@@ -41,5 +41,3 @@ COPY ./.devcontainer/bashrc.sh .
 RUN sed -i 's/\r$//' ./bashrc.sh && \
     chmod +x ./bashrc.sh
 RUN cat ./bashrc.sh >> .bashrc
-
-

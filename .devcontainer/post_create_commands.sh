@@ -1,9 +1,10 @@
 #!/bin/bash
 # shellcheck disable=SC1091,SC2059
+set -e
 
-sed -i 's/\r$//' /workspaces/python/cli/bin/template-python-devcontainer
-chmod +x /workspaces/template-python-devcontainer/cli/bin/template-python-devcontainer
-git config --global --add safe.directory /workspaces/template-python-devcontainer
+sed -i 's/\r$//' /workspaces/irr-calculator/cli/bin/irr-calculator
+chmod +x /workspaces/irr-calculator/cli/bin/irr-calculator
+git config --global --add safe.directory /workspaces/irr-calculator
 gcloud auth application-default login
 
 FILE="./.devcontainer/git_config.sh"
