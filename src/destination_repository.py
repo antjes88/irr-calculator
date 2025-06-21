@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Dict, List
 from google.cloud import bigquery
+import math
 
 from src import model
 
@@ -88,6 +89,10 @@ class BigQueryDestinationRepository(AbstractDestinationRepository):
             }
             for account in accounts.values()
             for irr in account.irr_snapshots
+            if irr.irr_monthly is not None
+            and not math.isnan(irr.irr_monthly)
+            and irr.irr_annual is not None
+            and not math.isnan(irr.irr_annual)
         ]
         job_config = bigquery.LoadJobConfig(
             write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
