@@ -1,29 +1,18 @@
 from src.destination_repository import AbstractDestinationRepository
 from src.source_repository import AbstractSourceRepository
-from src import model
+from src.utils.logs import default_module_logger
+
+logger = default_module_logger(__file__)
 
 
 def irr_pipeline(
     source_repository: AbstractSourceRepository,
     destination_repository: AbstractDestinationRepository,
 ):
-    """
-    Executes the Internal Rate of Return (IRR) data pipeline.
-    This pipeline retrieves cashflow snapshots from the source repository,
-    processes them to create account collections, allocates cashflows to accounts,
-    calculates IRRs for each account, and loads the resulting IRR data into the destination repository.
 
-    Args:
-        source_repository (AbstractSourceRepository): The repository used to retrieve cashflow snapshots.
-        destination_repository (AbstractDestinationRepository): The repository used to store calculated IRR data.
-    """
-    cashflow_snapshots = source_repository.get_cashflow_snapshots()
-    accounts = model.account_collection_creation(cashflow_snapshots)
-    accounts = model.allocate_cashflow_snapshots_to_accounts(
-        cashflow_snapshots, accounts
-    )
-
+    accounts = source_repository.get_accounts()
     for account in accounts.values():
-        account.calculate_irr()
+        if not account.calculate_irr():
+            logger.info(f"Not enough values for {account.account_name}")
 
     destination_repository.load_irrs(accounts)

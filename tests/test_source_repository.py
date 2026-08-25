@@ -10,7 +10,7 @@ def test_get_cashflow_snapshots(
     WHEN they are passed as arguments to BiqQueryRepository.load_exchange_rates()
     THEN Exchange Rates should be loaded into the destination table in the data repository
     """
-    results = source_repository_with_cashflows.get_cashflow_snapshots()
+    results = source_repository_with_cashflows._get_cashflow_snapshots()
 
     assert len(results) == len(CAHSFLOW_SNAPSHOTS)
     assert sorted(results) == sorted(CAHSFLOW_SNAPSHOTS)

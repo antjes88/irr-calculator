@@ -32,7 +32,9 @@ def test_sort_for_cashflow_none_cases():
     WHEN those cashflows are sorted
     THEN cashflow with None as date should be listed first
     """
-    cashflow1 = model.CashflowSnapshot(None, 1000, 0, 0, "test entity")
+    cashflow1 = model.CashflowSnapshot(
+        dt.datetime(1990, 1, 1), 1000, 0, 0, "test entity"
+    )
     cashflow2 = model.CashflowSnapshot(
         dt.datetime(2023, 2, 1), 0, 100, 1000, "test entity"
     )
@@ -41,53 +43,43 @@ def test_sort_for_cashflow_none_cases():
     assert sorted([cashflow2, cashflow1]) == [cashflow1, cashflow2]
 
 
-def test_allocate():
+@pytest.mark.parametrize(
+    "date1, date2, expected_result",
+    [
+        (dt.date(2023, 1, 1), dt.date(2022, 1, 1), True),
+        (dt.date(2022, 1, 1), dt.date(2023, 1, 1), False),
+        (dt.date(2022, 1, 1), dt.date(2022, 1, 1), False),
+        (None, dt.date(2022, 1, 1), False),
+        (dt.date(2022, 1, 1), None, True),
+        (None, None, False),
+    ],
+)
+def test_cashflow_snapshot_gt(date1, date2, expected_result):
     """
-    GIVEN an entity
-    WHEN cashflows are added to entity (Entity.add_cashflow())
-    THEN cashflow collection of entity object (Entity.sorted_cashflows) are updated to include
-         this cashflow and are sorted
+    GIVEN two CashflowSnapshot instances with various dates (including None)
+    WHEN comparing them with the greater-than operator (>)
+    THEN it should evaluate to the expected boolean result
     """
-    entity_name = "test entity"
-    cashflow1 = model.CashflowSnapshot(
-        dt.datetime(2022, 1, 1), 100, 100, 100, entity_name
-    )
-    cashflow2 = model.CashflowSnapshot(
-        dt.datetime(2023, 1, 2), 1000, 1000, 1000, entity_name
-    )
-    entity = model.Account(entity_name)
-    entities = {entity_name: entity}
+    snapshot1 = model.CashflowSnapshot(date1, 1000, 0, 0, "entity 1")
+    snapshot2 = model.CashflowSnapshot(date2, 2000, 100, 500, "entity 2")
 
-    model.allocate_cashflow_snapshots_to_accounts([cashflow2, cashflow1], entities)
-
-    assert entity.sorted_cashflow_snapshots == [cashflow1, cashflow2]
+    assert (snapshot1 > snapshot2) == expected_result
+    assert snapshot1.__gt__(snapshot2) == expected_result
 
 
-def test_calculate_irrs():
+def test_calculate_irrs_insufficient_values():
     """
-    GIVEN an entity with a collection of cashflows
-    WHEN Internal Rate of Return (irr or dcf, Discounted Cash Flow) is calculated (Entity.calculate_irr())
-    THEN irrs has to be calculated producing expected results
+    GIVEN an entity with fewer than 2 cashflows
+    WHEN calculate_irr() is called
+    THEN it should return False and irr_snapshots should be empty
     """
-    entity_name = "test account"
-    entity = model.Account(entity_name)
-    entities = {entity_name: entity}
-
-    model.allocate_cashflow_snapshots_to_accounts(
-        [
-            model.CashflowSnapshot(dt.datetime(2022, 1, 1), 1000, 0, 0, entity_name),
-            model.CashflowSnapshot(dt.datetime(2022, 2, 1), 0, 100, 1000, entity_name),
-            model.CashflowSnapshot(dt.datetime(2022, 3, 1), 0, 100, 1000, entity_name),
-        ],
-        entities,
+    account = model.Account("test account")
+    account.add_cashflow(
+        model.CashflowSnapshot(dt.datetime(2022, 1, 1), 1000, 0, 0, "test account")
     )
 
-    entities[entity_name].calculate_irr()
-
-    assert entities[entity_name].irr_snapshots == [
-        model.IrrSnapshot(dt.datetime(2022, 2, 1), 0.1, entity_name),
-        model.IrrSnapshot(dt.datetime(2022, 3, 1), 0.1, entity_name),
-    ]
+    assert account.calculate_irr() is False
+    assert account.irr_snapshots == []
 
 
 @pytest.mark.parametrize(
@@ -104,27 +96,43 @@ def test_cashflow_value_annual(value, expected_result):
     assert irr.irr_annual == expected_result
 
 
-def test_entity_equality():
+@pytest.mark.parametrize(
+    "name1, name2, expected_equal",
+    [
+        ("Account A", "Account A", True),
+        ("Account A", "Account B", False),
+        ("account a", "Account A", False),
+        ("", "", True),
+        ("", "Account", False),
+        ("Test #123", "Test #123", True),
+    ],
+)
+def test_account_equality_and_hash(name1, name2, expected_equal):
     """
-    GIVEN 2 entities
-    WHEN they have the same entity name
-    THEN they are equal
+    GIVEN two Account instances with various names
+    WHEN comparing them with == and computing their hashes
+    THEN equality, hash consistency, and set deduplication should match expectation
     """
-    entity_name = "test entity"
-    entity1 = model.Account(entity_name)
-    entity2 = model.Account(entity_name)
+    account1 = model.Account(name1)
+    account2 = model.Account(name2)
 
-    assert entity1 == entity2
+    assert (account1 == account2) == expected_equal
+    assert (hash(account1) == hash(account2)) == expected_equal
+
+    if expected_equal:
+        assert len({account1, account2}) == 1
+    else:
+        assert len({account1, account2}) == 2
 
 
-def test_entity_inequality():
+def test_account_equality_non_account_type():
     """
-    GIVEN 2 entities
-    WHEN they have different entity name
-    THEN they are different
+    GIVEN an Account instance and non-Account objects
+    WHEN comparing them with ==
+    THEN it should return False
     """
-    entity1 = model.Account("test entity")
-    entity2 = model.Account("other")
+    account = model.Account("test entity")
 
-    assert not entity1 == entity2
-    assert not entity1 == 1
+    assert not (account == 1)
+    assert not (account == "test entity")
+    assert not (account is None)

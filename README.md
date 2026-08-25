@@ -4,11 +4,20 @@ This solution calculates the Internal Rate of Return (IRR) for multiple accounts
 
 The repository includes tools, pipelines, and configurations designed to streamline the ingestion process while ensuring scalability and maintainability.
 
-The solution is deployed as a Google Cloud Function using Terraform. This Cloud Function is triggered on a schedule by Cloud Scheduler and processes the IRR upon activation.
+The solution is deployed as a Google Cloud Function (2nd Gen) using Terraform. It is triggered on a daily schedule by Cloud Scheduler via a Cloud Pub/Sub topic to process and update IRR calculations.
 
 <p align="center">
-    <img src="docs/images/solution_diagram.png" alt="Adapters Diagram">
+    <img src="docs/images/solution_diagram.png" alt="Solution Diagram">
 </p>
+
+## Data Flow & Schema
+
+The pipeline extracts monthly cashflow snapshots from BigQuery, calculates monthly and annualized IRR per account, and loads the calculated records into the destination table.
+
+| Layer | Storage | Table / Dataset | Schema / Key Fields | Write Mode |
+|---|---|---|---|---|
+| **Source** | BigQuery | `tier2_staging.cashflows` | `first_day_of_month` (DATE)<br>`inflow` (FLOAT)<br>`outflow` (FLOAT)<br>`value` (FLOAT)<br>`entity_name` (STRING) | Read-only |
+| **Destination** | BigQuery | `tier3_domain.entity_irrs` | `first_day_of_month` (DATE/STRING)<br>`irr_monthly` (FLOAT)<br>`irr_annual` (FLOAT)<br>`entity_name` (STRING) | `WRITE_TRUNCATE` |
 
 
 ## Internal Rate of Return (IRR)
@@ -35,11 +44,11 @@ The IRR is found by solving the NPV equation for \( r \) when \( NPV = 0 \).
 
 - **Development Environment**: Pre-configured development container for consistent setup.
 - **Comprehensive Testing**: Includes pre-configured unit tests and integration tests to ensure code reliability, along with test coverage reporting.
-- **Pipeline Integration**: Automated pipelines to unit test python code and deployment de GCP.
+- **Pipeline Integration**: Automated pipelines to unit test python code and deployment to GCP.
 
 ## Development environment
 
-Recommended development enviroment is VSCode Dev Containers extension. The configuration and set up of this dev container is already defined in `.devcontainer/devcontainer.json` so setting up a new containerised dev environment on your machine is straight-forward.
+Recommended development environment is VSCode Dev Containers extension. The configuration and set up of this dev container is already defined in `.devcontainer/devcontainer.json` so setting up a new containerised dev environment on your machine is straight-forward.
 
 Pre-requisites:
 - docker installed on your machine and available on your `PATH`
@@ -47,7 +56,7 @@ Pre-requisites:
 - [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) vscode extension installed
 
 Steps:
-- In VSCode go to `View -> Command Pallet` and search for the command `>Dev Containers: Rebuild and Reopen in Container`
+- In VSCode go to `View -> Command Palette` and search for the command `>Dev Containers: Rebuild and Reopen in Container`
 
 The first time you open the workspace within the container it'll take a few minutes to build the container, setup the virtual env and then login to gcloud. At the end of this process you will be presented with a url and asked to provide an authorization. Simply follow the url, permit the access and copy the auth code provided at the end back into to the terminal and press enter. 
 
@@ -64,9 +73,22 @@ git config --global user.email "{your github account email}"
 
 ### Local Execution
 
-Local execution is enhanced by the use of the Python library `Click`, which allows the creation of Command Line Interfaces. To execute the solution locally, run the command `irr-calculator` in a Bash terminal inside the devcontainer. This command will display a message listing the available arguments for performing different actions. You can explore additional details and options by using the `--help` flag.
+Local execution is enhanced by the use of the Python library `Click`, which provides a Command Line Interface.
 
-you need to provide a `.env` file at project root location with the following data:
+To execute the IRR calculation pipeline locally inside the devcontainer, run:
+
+```bash
+irr-calculator calculate-irr
+```
+
+You can explore available subcommands and flags using `--help`:
+
+```bash
+irr-calculator --help
+irr-calculator calculate-irr --help
+```
+
+You need to provide a `.env` file at project root location with the following data:
 
 ```ini
 PROJECT_SOURCE={Source GCP Project Id}
@@ -102,7 +124,7 @@ The `src/entrypoints/cloud_function/main.py` file is used by the deployed soluti
 
 Several entry points can be provided seamlessly because, following Clean Architecture principles, the `main.py` function is treated as the last detail. This ensures that none of the core solution code depends on the entry point; instead, the entry point depends on the core solution code. This design promotes flexibility and allows for the easy addition of new entry points without impacting the existing architecture. Which, in turn, means that the domain model is independent of the infrastructure. 
 
-The Python entrypoint invokes one of the services found in `src/services.py`. You can find there `irr_pipeline()` which executes the Internal Rate of Return (IRR) data pipeline. This service receive objects of the adapters for both the destination repository and the source repository as parameters.
+The Python entrypoint invokes one of the services found in `src/services.py`. You can find there `irr_pipeline()` which executes the Internal Rate of Return (IRR) data pipeline. This service receives objects of the adapters for both the destination repository and the source repository as parameters.
 
 The services handle the execution by calling methods found in the Domain and Adapters to ensure the successful completion of the process.
 
@@ -118,12 +140,12 @@ Related code can be found on `src/destination_repository.py` and `src/source_rep
     <img src="docs/images/adapters_diagram.png" alt="Adapters Diagram">
 </p>
 
-In the picture above you can also find the Domain Model diagram representing the code found in `src/model` folder. Circles are value objects, rectangles are entities, and domain services are parallelograms.
+In the picture above you can also find the Domain Model diagram representing the code found in `src/model.py` module. Circles are value objects, rectangles are entities, and domain services are parallelograms.
 
 ## CI/CD - Pipeline Integration
-There are 2 gropus of CI/CD pipelines implemented as GitHub Actions:
+There are 2 groups of CI/CD pipelines implemented as GitHub Actions:
 
-1. **Pytest**: This pipeline is defined in the `.github/workflows/pytest.yaml` file. It is triggered on every pull request, what runs unit tests using `pytest`. It also generates a test coverage report to ensure code quality. If any test fails, the pipeline will block the merge process, ensuring that only reliable code is integrated into the main branch. Finally, the pipeline requiress a pytest coverage over a given threshold. A Service Account granted with roles `roles/bigquery.dataEditor` and `roles/bigquery.jobUser` on both source and destination GCP Projects are required. Current workflow, `.github/workflows/pytest.yaml`, is set to access GCP Project through Workload Identity Provider.
+1. **Pytest**: This pipeline is defined in the `.github/workflows/pytest.yaml` file. It is triggered on every pull request, which runs unit tests using `pytest`. It also generates a test coverage report to ensure code quality. If any test fails, the pipeline will block the merge process, ensuring that only reliable code is integrated into the main branch. Finally, the pipeline requires a pytest coverage over a given threshold. A Service Account granted with roles `roles/bigquery.dataEditor` and `roles/bigquery.jobUser` on both source and destination GCP Projects are required. Current workflow, `.github/workflows/pytest.yaml`, is set to access GCP Project through Workload Identity Provider.
 
 2. **Deployment**: The deployment process is managed through two GitHub Actions workflows. The first workflow, `.github/workflows/terraform-validate.yaml`, validates the Terraform code and generates a deployment plan during a pull request, blocking merge in case of failures. The second workflow, `.github/workflows/terraform-apply.yaml`, executes after a merge to deploy the changes to Google Cloud Platform (GCP).
 
@@ -143,11 +165,23 @@ The Terraform code automates the deployment process by managing the following co
 
 The Terraform code is designed to be executed by the workflows defined in `.github/workflows/terraform-validate.yaml` and `.github/workflows/terraform-apply.yaml`. 
 
-If you prefer to execute the Terraform code locally, you must first run the `.github/package_cfsrc.sh`* bash script. This script packages the source code into a zip file. Once the zip file is created, you can proceed with running `terraform plan` or `terraform apply`, providing the name of the zip file.
+If you prefer to execute the Terraform code locally, you must first run the `.github/package_cfsrc.sh`* bash script to package the source code into a zip file:
+
+```bash
+# Usage: bash .github/package_cfsrc.sh <RUNNER_TEMP_DIR> <OUTPUT_ZIP_PATH>
+bash .github/package_cfsrc.sh /tmp ./terraform/source_code.zip
+```
+
+Once the zip file is created, you can proceed with running `terraform plan` or `terraform apply`, providing the name of the zip file via variables:
+
+```bash
+cd terraform
+terraform plan -var="zip_file_path=./source_code.zip"
+```
 
 The backend for this solution is configured to reside in Google Cloud Storage (GCS). If you plan to reuse this code, ensure you update the backend bucket name accordingly.
 
-**This file must be executed at repo root folder.*
+**This file must be executed at repo root folder level.*
 
 ### Prerequisites for Terraform Execution
 
